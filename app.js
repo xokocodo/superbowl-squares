@@ -29,15 +29,11 @@ const elements = {
   boardToolbar: document.querySelector(".board-toolbar"),
   boardShell: document.querySelector(".board-shell"),
   viewToggle: document.querySelector(".view-toggle"),
-  boardScore: document.getElementById("board-score"),
-  boardScoreClock: document.getElementById("board-score-clock"),
-  boardScoreTeamA: document.getElementById("board-score-team-a"),
-  boardScoreTeamB: document.getElementById("board-score-team-b"),
-  boardScoreValueA: document.getElementById("board-score-value-a"),
-  boardScoreValueB: document.getElementById("board-score-value-b"),
   gameTitle: document.getElementById("game-title"),
   gameSubtitle: document.getElementById("game-subtitle"),
   gameClock: document.getElementById("game-clock"),
+  scoreboardStatus: document.getElementById("scoreboard-status"),
+  scoreboardDown: document.getElementById("scoreboard-down"),
   teamALogo: document.getElementById("team-a-logo"),
   teamAShort: document.getElementById("team-a-short"),
   teamAName: document.getElementById("team-a-name"),
@@ -75,6 +71,7 @@ const elements = {
   winningInfo: document.getElementById("winning-info"),
   winningInfoCompact: document.getElementById("winning-info-compact"),
   oddsSummary: document.getElementById("odds-summary"),
+  boardRefresh: document.getElementById("board-refresh"),
   priceInput: document.getElementById("price-input"),
   gameTitleInput: document.getElementById("game-title-input"),
   teamAInput: document.getElementById("team-a-input"),
@@ -150,6 +147,7 @@ let state = loadState();
 let syncTimeout = null;
 let lastSyncOk = false;
 let lastSyncMessage = "Backend: not connected";
+let lastBoardSync = "";
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -230,6 +228,15 @@ function normalizeTeamShort(name) {
     .toUpperCase();
   if (!letters) return "TBD";
   return letters.slice(0, 3);
+}
+
+function matchesPossession(possession, teamName, teamShort) {
+  if (!possession) return false;
+  const normalized = String(possession).toLowerCase();
+  return (
+    normalized.includes(String(teamName).toLowerCase()) ||
+    normalized.includes(String(teamShort).toLowerCase())
+  );
 }
 
 function isMobileView() {
@@ -1084,19 +1091,23 @@ function renderParticipantSummary() {
     elements.summaryList.innerHTML = '<div class="hint">No squares assigned yet.</div>';
     return;
   }
-  const viewKey = state.oddsView;
-  const { oddsByName } = buildOddsByName(viewKey);
-  const payout = getPayoutForView(viewKey);
+  const halftimeOdds = buildOddsByName("halftime").oddsByName;
+  const finalOdds = buildOddsByName("final").oddsByName;
+  const halftimePayout = getPayoutForView("halftime");
+  const finalPayout = getPayoutForView("final");
   elements.summaryList.innerHTML = participants
     .map(
       (participant) => `
         <div class="summary-row" data-name="${participant.name}">
           <span>${participant.name}</span>
-          <span class="count">${participant.count} • ${formatMoney(
-        participant.total
-      )} • ${formatPercent(oddsByName[participant.name] || 0)} • ${formatMoney(
-        (oddsByName[participant.name] || 0) * payout
-      )}</span>
+          <span class="count">${participant.count} • ${formatMoney(participant.total)}</span>
+          <span class="meta">
+            HT ${formatPercent(halftimeOdds[participant.name] || 0)} • ${formatMoney(
+        (halftimeOdds[participant.name] || 0) * halftimePayout
+      )} · Final ${formatPercent(finalOdds[participant.name] || 0)} • ${formatMoney(
+        (finalOdds[participant.name] || 0) * finalPayout
+      )}
+          </span>
         </div>
       `
     )
@@ -1123,23 +1134,37 @@ function render() {
   const teamBShort = normalizeTeamShort(teamBName);
   const admin = isAdmin();
   placeViewToggle();
+  const locked = state.locked.halftime || state.locked.final;
   elements.viewHalftime.classList.toggle("active", state.view === "halftime");
   elements.viewFinal.classList.toggle("active", state.view === "final");
   elements.gameTitle.textContent = state.gameTitle || "Super Bowl";
   document.title = `${elements.gameTitle.textContent} Squares`;
   elements.gameSubtitle.textContent = `${teamAName} vs ${teamBName}`;
   elements.gameClock.textContent = state.gameClock || "Clock —";
-  elements.boardScoreClock.textContent = state.gameClock || "Clock —";
+  elements.scoreboardStatus.textContent =
+    state.gameInfo?.statusDetail || state.gameClock || "Clock —";
+  elements.scoreboardDown.textContent = state.gameInfo?.downDistance
+    ? `Down & distance: ${state.gameInfo.downDistance}`
+    : "Down & distance —";
   elements.teamAName.textContent = teamAName;
   elements.teamBName.textContent = teamBName;
   elements.teamAShort.textContent = teamAShort;
   elements.teamBShort.textContent = teamBShort;
   elements.teamAScore.textContent = state.scores.seahawks;
   elements.teamBScore.textContent = state.scores.patriots;
-  elements.boardScoreTeamA.textContent = teamAName;
-  elements.boardScoreTeamB.textContent = teamBName;
-  elements.boardScoreValueA.textContent = state.scores.seahawks;
-  elements.boardScoreValueB.textContent = state.scores.patriots;
+  const possession = state.gameInfo?.possession || "";
+  const teamABadge = elements.teamAName?.closest(".team-badge");
+  const teamBBadge = elements.teamBName?.closest(".team-badge");
+  if (teamABadge && teamBBadge) {
+    teamABadge.classList.toggle(
+      "possession",
+      matchesPossession(possession, teamAName, teamAShort)
+    );
+    teamBBadge.classList.toggle(
+      "possession",
+      matchesPossession(possession, teamBName, teamBShort)
+    );
+  }
   setLogo(elements.teamALogo, state.teamALogo, `${teamAName} logo`);
   setLogo(elements.teamBLogo, state.teamBLogo, `${teamBName} logo`);
   elements.rowsLabel.textContent = teamAName;
@@ -1165,6 +1190,10 @@ function render() {
   elements.teamBLogoInput.value = state.teamBLogo;
   elements.adminKeyInput.value = admin ? getAdminKey() : "";
   elements.syncStatus.textContent = lastSyncMessage;
+  elements.randomizeDigits.style.display = locked ? "none" : "";
+  elements.boardRefresh.textContent = lastBoardSync
+    ? `Board synced ${new Date(lastBoardSync).toLocaleTimeString()}`
+    : "Board synced —";
   elements.ratioHalftime.value = halftimePercent;
   elements.ratioFinal.value = finalPercent;
   elements.totalPot.textContent = formatMoney(totalPot);
@@ -1432,6 +1461,7 @@ async function fetchBoardFromServer() {
       return;
     }
     applyServerState(payload.state);
+    lastBoardSync = new Date().toISOString();
     setSyncStatus("Backend: synced", true);
     render();
   } catch (error) {
@@ -1452,6 +1482,7 @@ async function pushBoardToServer() {
       body: JSON.stringify({ state: serializeStateForServer() }),
     });
     if (!response.ok) throw new Error("Write failed");
+    lastBoardSync = new Date().toISOString();
     setSyncStatus("Backend: saved", true);
   } catch (error) {
     setSyncStatus("Backend: save failed", false);

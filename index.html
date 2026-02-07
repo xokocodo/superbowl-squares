@@ -31,6 +31,10 @@
           <div class="team-score" id="team-b-score">0</div>
         </div>
       </div>
+      <div class="scoreboard-meta">
+        <div class="scoreboard-status" id="scoreboard-status">Clock —</div>
+        <div class="scoreboard-down" id="scoreboard-down">Down &amp; distance —</div>
+      </div>
     </header>
 
     <main class="app-main" id="app-main">
@@ -52,20 +56,6 @@
         <div class="view-toggle" role="group" aria-label="Score view">
           <button type="button" id="view-halftime" class="toggle active">Halftime</button>
           <button type="button" id="view-final" class="toggle">Final</button>
-        </div>
-        <div class="card board-score" id="board-score">
-          <div class="board-score-header">
-            <div class="board-score-title">Live score</div>
-            <div class="board-score-clock" id="board-score-clock">Clock —</div>
-          </div>
-          <div class="board-score-row">
-            <span id="board-score-team-a">Team A</span>
-            <span id="board-score-value-a">0</span>
-          </div>
-          <div class="board-score-row">
-            <span id="board-score-team-b">Team B</span>
-            <span id="board-score-value-b">0</span>
-          </div>
         </div>
         <section id="print-view" class="print-view" aria-hidden="true">
           <div class="print-header">
@@ -89,6 +79,7 @@
         <div class="card board-status" id="board-status">
           <h2>Current winners</h2>
           <div class="winning-info" id="winning-info-compact"></div>
+          <div class="hint" id="board-refresh">Board synced —</div>
         </div>
         <div class="card board-status" id="odds-section">
           <h2>User odds</h2>

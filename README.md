@@ -17,6 +17,7 @@ Lightweight Superbowl squares board with a sleek UI, printable PDF view, and opt
 - Payout split (default 30% halftime / 70% final).
 - Live score auto‑fetch (ESPN) with manual fallback.
 - Current winner + scenario outcomes (+3/+7 for each team).
+- Scoreboard context (clock/period, possession, down & distance when available).
 - Likelihood model for square/user win odds (heuristic).
 - Print‑friendly PDF view.
 - Optional shared state backend (Cloudflare Pages Functions + KV).
@@ -47,6 +48,7 @@ The app estimates square win likelihoods using a simple, transparent model:
 This produces:
 - Per‑square probabilities (tooltip on hover).
 - Per‑user total odds (sum of their squares’ probabilities).
+- Expected value for halftime and final payouts in the participant summary.
 
 ## Backend (optional)
 The app can run fully client‑side. For shared state:

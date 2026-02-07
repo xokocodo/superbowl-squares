@@ -73,6 +73,33 @@ textarea {
   letter-spacing: 0.4px;
 }
 
+.scoreboard-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.scoreboard-status,
+.scoreboard-down {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.team-badge.possession {
+  border-color: rgba(34, 197, 94, 0.7);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
+.team-badge.possession .team-mark,
+.team-badge.possession .team-score {
+  color: #bbf7d0;
+}
+
 .team-badge {
   background: var(--card);
   padding: 12px 18px;
@@ -165,37 +192,9 @@ textarea {
   gap: 18px;
 }
 
-.board-score {
-  display: none;
-  gap: 10px;
-}
-
 .view-toggle.below-board {
   justify-self: center;
   margin-top: 8px;
-}
-
-.board-score-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 14px;
-  color: var(--muted);
-}
-
-.board-score-title {
-  font-weight: 600;
-}
-
-.board-score-clock {
-  font-weight: 600;
-}
-
-.board-score-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 16px;
-  font-weight: 600;
 }
 
 .board-status {
@@ -220,6 +219,7 @@ textarea {
   padding: 4px;
   display: inline-flex;
   gap: 4px;
+  margin-top: 12px;
 }
 
 .toggle {
@@ -501,15 +501,20 @@ button:disabled {
 }
 
 .summary-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 12px;
   padding: 10px 12px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
   font-size: 13px;
   cursor: pointer;
+}
+
+.summary-row .meta {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--muted);
 }
 
 .summary-row:hover {
@@ -670,8 +675,8 @@ button:disabled {
 .odds-summary {
   margin-top: 6px;
   display: grid;
-  gap: 6px;
-  font-size: 13px;
+  gap: 8px;
+  font-size: 14px;
   color: var(--text);
 }
 
@@ -681,14 +686,24 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
+  font-size: 14px;
 }
 
 .odds-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 13px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 14px;
+}
+
+.odds-row span:last-child {
+  font-weight: 600;
+  color: #e2e8f0;
 }
 
 .odds-toggle {
@@ -775,6 +790,10 @@ button:disabled {
     gap: 10px;
   }
 
+  .scoreboard-meta {
+    display: none;
+  }
+
   .team-badge {
     padding: 8px 12px;
     border-radius: 14px;
@@ -833,10 +852,6 @@ button:disabled {
   }
 
   .side-panel {
-    display: none;
-  }
-
-  .board-score {
     display: none;
   }
 
