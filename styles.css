@@ -1,0 +1,663 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: light;
+  --bg: #0c0f16;
+  --card: #171b26;
+  --panel: #101521;
+  --text: #f3f6ff;
+  --muted: #aab1c6;
+  --accent: #3b82f6;
+  --accent-2: #38bdf8;
+  --danger: #f87171;
+  --seahawks: #002244;
+  --seahawks-accent: #69be28;
+  --patriots: #002244;
+  --patriots-accent: #c60c30;
+  --grid-gap: 6px;
+  --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "SF Pro Text", system-ui, -apple-system, sans-serif;
+  background: radial-gradient(circle at top, #1c2232 0%, #0a0d14 60%, #06080c 100%);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.app-header {
+  padding: 32px 48px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.title-block h1 {
+  margin: 0 0 8px;
+  font-size: clamp(24px, 3vw, 36px);
+}
+
+.title-block p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.team-badges {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.game-clock {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.team-badge {
+  background: var(--card);
+  padding: 12px 18px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 140px;
+  box-shadow: var(--shadow);
+}
+
+.team-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 4px;
+}
+
+.team-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.team-logo.hidden {
+  display: none;
+}
+
+.team-mark {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.team-name {
+  font-size: 14px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.team-score {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.team-badge.seahawks {
+  border: 1px solid rgba(105, 190, 40, 0.5);
+}
+
+.team-badge.seahawks .team-mark {
+  color: var(--seahawks-accent);
+}
+
+.team-badge.patriots {
+  border: 1px solid rgba(198, 12, 48, 0.5);
+}
+
+.team-badge.patriots .team-mark {
+  color: var(--patriots-accent);
+}
+
+.app-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.9fr);
+  gap: 28px;
+  padding: 28px 48px 40px;
+}
+
+.app-main.collapsed {
+  grid-template-columns: 1fr;
+}
+
+.app-main.collapsed .side-panel {
+  display: none;
+}
+
+.board-panel {
+  background: var(--panel);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 18px;
+}
+
+.board-status {
+  display: none;
+}
+
+.app-main.collapsed .board-status {
+  display: grid;
+}
+
+.board-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.view-toggle {
+  background: #1a2030;
+  border-radius: 999px;
+  padding: 4px;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.toggle {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.toggle.active {
+  background: #2c3652;
+  color: var(--text);
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 12px;
+}
+
+button {
+  border: 1px solid transparent;
+  background: #222a3a;
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+button.primary {
+  background: linear-gradient(135deg, #3b82f6, #38bdf8);
+  color: #04152e;
+  font-weight: 600;
+}
+
+button.danger {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fecaca;
+}
+
+button.ghost {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.board-shell {
+  position: relative;
+  padding-left: 28px;
+  padding-top: 24px;
+}
+
+.axis-label {
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.axis-label.team-a {
+  color: var(--seahawks-accent);
+}
+
+.axis-label.team-b {
+  color: var(--patriots-accent);
+}
+
+.axis-label.rows-label {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: translate(-100%, -50%) rotate(180deg);
+}
+
+.axis-label.cols-label {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  text-align: center;
+}
+
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(11, minmax(32px, 1fr));
+  gap: var(--grid-gap);
+}
+
+.print-grid {
+  display: none;
+}
+
+.print-view {
+  display: none;
+}
+
+.print-grid .cell.label {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.cell {
+  border-radius: 10px;
+  padding: 6px;
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-size: 14px;
+  background: #1c2334;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cell.header {
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 600;
+  color: var(--accent-2);
+}
+
+.cell.corner {
+  background: transparent;
+  border: none;
+}
+
+.cell.square {
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+}
+
+.cell.square:hover {
+  transform: scale(1.02);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.cell.square.assigned {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.cell.square.highlight-row,
+.cell.square.highlight-col {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.35);
+}
+
+.cell.square.highlight-row.highlight-col {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
+
+.cell.square.winner {
+  border-color: rgba(105, 190, 40, 0.8);
+  box-shadow: inset 0 0 0 2px rgba(105, 190, 40, 0.6);
+  background: linear-gradient(135deg, rgba(105, 190, 40, 0.35), rgba(59, 130, 246, 0.2));
+  color: #f6ffe9;
+  font-weight: 600;
+}
+
+.cell.header.highlight {
+  background: rgba(56, 189, 248, 0.25);
+  color: #e0f2fe;
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.side-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 12px;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.field input[type="text"],
+.field input[type="number"],
+.field input[type="file"] {
+  background: #101521;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: var(--text);
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.participants-list {
+  display: grid;
+  gap: 10px;
+}
+
+.quick-picks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.participant-row {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.participant-row .name {
+  font-weight: 600;
+}
+
+.participant-row .total {
+  color: var(--accent-2);
+}
+
+.cost-summary {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.payout-summary {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.payout-summary .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.score-inputs {
+  display: grid;
+  gap: 10px;
+}
+
+.score-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.score-actions button {
+  justify-self: start;
+}
+
+.winning-info {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.winning-info .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  align-items: center;
+}
+
+.winning-info .row strong {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.winning-info .row span:last-child {
+  font-weight: 600;
+  color: #e2e8f0;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(30, 64, 175, 0.18);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.winning-info .row:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.winning-info .row:first-child {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.winning-info .row:first-child span:last-child {
+  background: rgba(15, 118, 110, 0.2);
+  border-color: rgba(45, 212, 191, 0.35);
+  color: #ecfeff;
+}
+
+.winning-info .row.section {
+  background: transparent;
+  border: none;
+  padding: 6px 2px 2px;
+}
+
+.winning-info .row.section span:last-child {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+}
+
+.settings-body {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.ratio-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.toggle-row {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 6px 0;
+}
+
+.export-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.app-footer {
+  padding: 0 48px 40px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+  .app-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+
+  .app-header,
+  .side-panel,
+  .app-footer,
+  .board-toolbar,
+  .axis-label,
+  .board-status,
+  .board-grid,
+  .print-grid {
+    display: none;
+  }
+
+  .board-panel {
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .print-view {
+    display: grid;
+    gap: 16px;
+    padding: 12px 0 0;
+  }
+
+  .print-header {
+    display: grid;
+    gap: 4px;
+  }
+
+  .print-header h1 {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .print-subtitle {
+    font-size: 14px;
+    color: #333;
+  }
+
+  .print-legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 16px;
+    font-size: 12px;
+    color: #333;
+  }
+
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .print-table td {
+    border: 1px solid #888;
+    padding: 6px 4px;
+    text-align: center;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+
+  .print-table td.header {
+    background: #f1f1f1;
+    font-weight: 700;
+    font-size: 11px;
+    white-space: normal;
+  }
+
+  .cell {
+    background: white;
+    color: black;
+    border: 1px solid #8f8f8f;
+  }
+
+  .cell.header {
+    background: #eee;
+    color: black;
+  }
+}

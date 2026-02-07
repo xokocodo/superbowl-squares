@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Super Bowl LX Squares</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="title-block">
+        <h1 id="game-title">Super Bowl LX</h1>
+        <p id="game-subtitle">Seahawks vs Patriots</p>
+      </div>
+      <div class="team-badges">
+        <div class="game-clock" id="game-clock">Clock —</div>
+        <div class="team-badge seahawks">
+          <img class="team-logo" id="team-a-logo" alt="Team A logo" />
+          <div class="team-meta">
+            <div class="team-mark" id="team-a-short">SEA</div>
+            <div class="team-name" id="team-a-name">Seahawks</div>
+          </div>
+          <div class="team-score" id="team-a-score">0</div>
+        </div>
+        <div class="team-badge patriots">
+          <img class="team-logo" id="team-b-logo" alt="Team B logo" />
+          <div class="team-meta">
+            <div class="team-mark" id="team-b-short">NE</div>
+            <div class="team-name" id="team-b-name">Patriots</div>
+          </div>
+          <div class="team-score" id="team-b-score">0</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-main" id="app-main">
+      <section class="board-panel">
+        <div class="board-toolbar">
+          <div class="view-toggle" role="group" aria-label="Score view">
+            <button type="button" id="view-halftime" class="toggle active">Halftime</button>
+            <button type="button" id="view-final" class="toggle">Final</button>
+          </div>
+          <div class="toolbar-actions">
+            <button type="button" id="toggle-sidebar">Focus mode</button>
+            <button type="button" id="randomize-digits" class="primary">Randomize digits</button>
+            <button type="button" id="export-pdf">Export PDF</button>
+          </div>
+        </div>
+
+        <div class="board-shell">
+          <div class="axis-label rows-label" id="rows-label">Seahawks rows</div>
+          <div class="axis-label cols-label" id="cols-label">Patriots columns</div>
+          <div id="board-grid" class="board-grid" aria-label="Squares grid"></div>
+          <div id="print-grid" class="print-grid" aria-hidden="true"></div>
+        </div>
+        <section id="print-view" class="print-view" aria-hidden="true">
+          <div class="print-header">
+            <h1 id="print-title">Super Bowl</h1>
+            <div class="print-subtitle" id="print-subtitle">Team A vs Team B</div>
+          </div>
+          <div class="print-legend">
+            <div><strong>HT</strong> = Halftime</div>
+            <div><strong>Final</strong> = Final score</div>
+            <div><strong>Rows</strong> = Team A</div>
+            <div><strong>Cols</strong> = Team B</div>
+          </div>
+          <div class="print-table-wrap">
+            <table id="print-table" class="print-table" aria-label="Printable squares board"></table>
+          </div>
+        </section>
+        <div class="card board-status" id="board-status">
+          <h2>Current winners</h2>
+          <div class="winning-info" id="winning-info-compact"></div>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <section class="card">
+          <h2>Join &amp; pick squares</h2>
+          <label class="field">
+            <span>Your name</span>
+            <input type="text" id="participant-name" placeholder="Type your name" />
+          </label>
+          <button type="button" id="set-active" class="primary">Set active</button>
+          <div class="quick-picks">
+            <button type="button" id="pick-1">Pick 1</button>
+            <button type="button" id="pick-5">Pick 5</button>
+            <button type="button" id="pick-10">Pick 10</button>
+          </div>
+          <p class="hint" id="active-display">No active participant yet.</p>
+        </section>
+
+        <section class="card">
+          <h2>Participants</h2>
+          <div id="participants-list" class="participants-list"></div>
+          <div class="cost-summary">
+            <div class="label">Price per square</div>
+            <div class="value" id="price-display">$0</div>
+          </div>
+          <div class="payout-summary">
+            <div class="row">
+              <span>Total pot</span>
+              <span id="total-pot">$0.00</span>
+            </div>
+            <div class="row">
+              <span id="payout-halftime-label">Halftime (30%)</span>
+              <span id="payout-halftime">$0.00</span>
+            </div>
+            <div class="row">
+              <span id="payout-final-label">Final (70%)</span>
+              <span id="payout-final">$0.00</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Game status</h2>
+          <div class="score-inputs">
+            <label class="field">
+              <span id="score-label-a">Seahawks score</span>
+              <input type="number" id="score-seahawks" min="0" />
+            </label>
+            <label class="field">
+              <span id="score-label-b">Patriots score</span>
+              <input type="number" id="score-patriots" min="0" />
+            </label>
+            <label class="field">
+              <span>Minutes remaining in half</span>
+              <input type="number" id="time-remaining-half" min="0" max="15" step="1" />
+            </label>
+            <label class="field">
+              <span>Minutes remaining in game</span>
+              <input type="number" id="time-remaining-game" min="0" max="60" step="1" />
+            </label>
+          </div>
+          <div class="score-actions">
+            <button type="button" id="fetch-score">Auto-fetch score</button>
+            <button type="button" id="test-api">Test API</button>
+            <div class="hint" id="fetch-status"></div>
+            <div class="hint" id="score-refreshed"></div>
+          </div>
+          <div class="winning-info" id="winning-info"></div>
+        </section>
+
+        <section class="card">
+          <details id="settings-panel">
+            <summary>Settings &amp; admin</summary>
+            <div class="settings-body">
+              <label class="field">
+                <span>Price per square</span>
+                <input type="number" id="price-input" min="0" step="1" />
+              </label>
+              <label class="field">
+                <span>Super Bowl name</span>
+                <input type="text" id="game-title-input" placeholder="Super Bowl LX" />
+              </label>
+              <label class="field">
+                <span>Team A</span>
+                <input type="text" id="team-a-input" placeholder="Seahawks" />
+              </label>
+              <label class="field">
+                <span>Team A logo URL</span>
+                <input type="text" id="team-a-logo-input" placeholder="https://..." />
+              </label>
+              <label class="field">
+                <span>Team B</span>
+                <input type="text" id="team-b-input" placeholder="Patriots" />
+              </label>
+              <label class="field">
+                <span>Team B logo URL</span>
+                <input type="text" id="team-b-logo-input" placeholder="https://..." />
+              </label>
+              <label class="field">
+                <span>Payout ratio (Halftime % / Final %)</span>
+                <div class="ratio-inputs">
+                  <input type="number" id="ratio-halftime" min="0" max="100" step="1" />
+                  <input type="number" id="ratio-final" min="0" max="100" step="1" />
+                </div>
+              </label>
+              <label class="field toggle-row">
+                <input type="checkbox" id="admin-toggle" />
+                <span>Admin mode (unlock re-randomize)</span>
+              </label>
+              <button type="button" id="rerandomize" class="danger">Re-randomize digits</button>
+              <button type="button" id="clear-board" class="ghost">Clear board</button>
+              <div class="divider"></div>
+              <div class="export-row">
+                <button type="button" id="export-json">Export JSON</button>
+                <button type="button" id="export-csv">Export CSV</button>
+              </div>
+              <label class="field">
+                <span>Import board (JSON or CSV)</span>
+                <input type="file" id="import-file" accept=".json,.csv" />
+              </label>
+            </div>
+          </details>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="app-footer">
+      Built by xokocodo 2026 with Cursor and gpt-codex-5.2
+    </footer>
+    <script src="app.js"></script>
+  </body>
+</html>
