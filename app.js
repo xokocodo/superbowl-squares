@@ -11,6 +11,12 @@ const elements = {
   printTitle: document.getElementById("print-title"),
   printSubtitle: document.getElementById("print-subtitle"),
   printTable: document.getElementById("print-table"),
+  boardScore: document.getElementById("board-score"),
+  boardScoreClock: document.getElementById("board-score-clock"),
+  boardScoreTeamA: document.getElementById("board-score-team-a"),
+  boardScoreTeamB: document.getElementById("board-score-team-b"),
+  boardScoreValueA: document.getElementById("board-score-value-a"),
+  boardScoreValueB: document.getElementById("board-score-value-b"),
   gameTitle: document.getElementById("game-title"),
   gameSubtitle: document.getElementById("game-subtitle"),
   gameClock: document.getElementById("game-clock"),
@@ -193,6 +199,10 @@ function normalizeTeamShort(name) {
     .toUpperCase();
   if (!letters) return "TBD";
   return letters.slice(0, 3);
+}
+
+function isMobileView() {
+  return window.matchMedia("(max-width: 820px)").matches;
 }
 
 function getTeamLabel(name) {
@@ -722,7 +732,13 @@ function renderBoard() {
     for (let col = 0; col < GRID_SIZE; col += 1) {
       const cell = squareCells[row][col];
       const name = state.grid[row][col];
-      cell.textContent = name || "";
+      if (!name) {
+        cell.textContent = "";
+      } else if (isMobileView()) {
+        cell.textContent = name.trim().charAt(0).toUpperCase();
+      } else {
+        cell.textContent = name;
+      }
       cell.classList.toggle("assigned", Boolean(name));
       const isWinner = winner && winner.rowIndex === row && winner.colIndex === col;
       const isRow = winner && winner.rowIndex === row;
@@ -846,12 +862,17 @@ function render() {
   document.title = `${elements.gameTitle.textContent} Squares`;
   elements.gameSubtitle.textContent = `${teamAName} vs ${teamBName}`;
   elements.gameClock.textContent = state.gameClock || "Clock —";
+  elements.boardScoreClock.textContent = state.gameClock || "Clock —";
   elements.teamAName.textContent = teamAName;
   elements.teamBName.textContent = teamBName;
   elements.teamAShort.textContent = teamAShort;
   elements.teamBShort.textContent = teamBShort;
   elements.teamAScore.textContent = state.scores.seahawks;
   elements.teamBScore.textContent = state.scores.patriots;
+  elements.boardScoreTeamA.textContent = teamAName;
+  elements.boardScoreTeamB.textContent = teamBName;
+  elements.boardScoreValueA.textContent = state.scores.seahawks;
+  elements.boardScoreValueB.textContent = state.scores.patriots;
   setLogo(elements.teamALogo, state.teamALogo, `${teamAName} logo`);
   setLogo(elements.teamBLogo, state.teamBLogo, `${teamBName} logo`);
   elements.rowsLabel.textContent = teamAName;
@@ -1253,6 +1274,7 @@ function setupListeners() {
     importFromFile(file);
     event.target.value = "";
   });
+  window.addEventListener("resize", render);
 }
 
 buildGrid();

@@ -165,6 +165,34 @@ textarea {
   gap: 18px;
 }
 
+.board-score {
+  display: none;
+  gap: 10px;
+}
+
+.board-score-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.board-score-title {
+  font-weight: 600;
+}
+
+.board-score-clock {
+  font-weight: 600;
+}
+
+.board-score-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 600;
+}
+
 .board-status {
   display: none;
 }
@@ -578,6 +606,93 @@ button:disabled {
 @media (max-width: 1100px) {
   .app-main {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 820px) {
+  .app-main {
+    padding: 20px 16px 28px;
+  }
+
+  .board-panel {
+    padding: 18px;
+  }
+
+  .board-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .toolbar-actions {
+    flex-wrap: wrap;
+  }
+
+  .toolbar-actions {
+    display: none;
+  }
+
+  .game-clock {
+    display: none;
+  }
+
+  .team-badges {
+    gap: 10px;
+  }
+
+  .team-badge {
+    padding: 8px 12px;
+    border-radius: 14px;
+    gap: 8px;
+  }
+
+  .team-logo {
+    width: 30px;
+    height: 30px;
+  }
+
+  .team-mark {
+    font-size: 16px;
+  }
+
+  .team-name {
+    display: none;
+  }
+
+  .team-score {
+    font-size: 22px;
+  }
+
+  .board-shell {
+    overflow: hidden;
+    padding-left: 16px;
+    padding-top: 16px;
+  }
+
+  .board-grid {
+    grid-template-columns: repeat(11, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+  }
+
+  .cell {
+    min-height: 34px;
+    font-size: 13px;
+  }
+
+  .axis-label {
+    font-size: 14px;
+  }
+
+  .side-panel {
+    display: none;
+  }
+
+  .board-score {
+    display: none;
+  }
+
+  .board-status {
+    display: grid;
   }
 }
 
