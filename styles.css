@@ -597,6 +597,15 @@ button:disabled {
   gap: 10px;
 }
 
+.section-title {
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
 .winning-info {
   background: rgba(255, 255, 255, 0.03);
   border-radius: 14px;
@@ -659,25 +668,40 @@ button:disabled {
 }
 
 .odds-summary {
-  margin-top: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 12px;
-  padding: 10px 12px;
+  margin-top: 6px;
   display: grid;
   gap: 6px;
-  font-size: 12px;
-  color: var(--muted);
+  font-size: 13px;
+  color: var(--text);
 }
 
 .odds-title {
   font-weight: 600;
   color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .odds-row {
   display: flex;
   justify-content: space-between;
   gap: 10px;
+  font-size: 13px;
+}
+
+.odds-toggle {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  padding: 2px;
+  display: inline-flex;
+  gap: 2px;
+}
+
+.odds-toggle .toggle {
+  padding: 4px 10px;
+  font-size: 11px;
 }
 
 .settings-body {
@@ -842,6 +866,10 @@ button:disabled {
     display: none;
   }
 
+  .board-panel > :not(.print-view) {
+    display: none !important;
+  }
+
   .board-panel {
     box-shadow: none;
     background: transparent;
@@ -852,6 +880,31 @@ button:disabled {
     display: grid;
     gap: 16px;
     padding: 12px 0 0;
+  }
+
+  .print-board {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .print-axis-top {
+    grid-column: 2;
+    text-align: center;
+    font-weight: 700;
+    font-size: 12px;
+  }
+
+  .print-axis-left {
+    grid-row: 2;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    font-weight: 700;
+    font-size: 12px;
+    text-align: center;
   }
 
   .print-header {
@@ -885,17 +938,23 @@ button:disabled {
 
   .print-table td {
     border: 1px solid #888;
-    padding: 6px 4px;
+    padding: 4px 2px;
     text-align: center;
-    font-size: 12px;
+    font-size: 11px;
     border-radius: 6px;
+    aspect-ratio: 1 / 1;
   }
 
   .print-table td.header {
     background: #f1f1f1;
     font-weight: 700;
-    font-size: 11px;
+    font-size: 10px;
     white-space: normal;
+  }
+
+  .print-table td.name-cell {
+    font-size: 9px;
+    line-height: 1.1;
   }
 
   .cell {

@@ -23,6 +23,8 @@ const elements = {
   printView: document.getElementById("print-view"),
   printTitle: document.getElementById("print-title"),
   printSubtitle: document.getElementById("print-subtitle"),
+  printAxisCols: document.getElementById("print-axis-cols"),
+  printAxisRows: document.getElementById("print-axis-rows"),
   printTable: document.getElementById("print-table"),
   boardToolbar: document.querySelector(".board-toolbar"),
   boardShell: document.querySelector(".board-shell"),
@@ -73,7 +75,6 @@ const elements = {
   winningInfo: document.getElementById("winning-info"),
   winningInfoCompact: document.getElementById("winning-info-compact"),
   oddsSummary: document.getElementById("odds-summary"),
-  oddsSummarySide: document.getElementById("odds-summary-side"),
   priceInput: document.getElementById("price-input"),
   gameTitleInput: document.getElementById("game-title-input"),
   teamAInput: document.getElementById("team-a-input"),
@@ -141,6 +142,7 @@ const defaultState = () => ({
   timeRemainingHalf: 15,
   timeRemainingGame: 60,
   highlightName: "",
+  oddsView: "halftime",
   lastScoreRefresh: "",
 });
 
@@ -199,6 +201,7 @@ function normalizeState(data) {
   base.timeRemainingHalf = Number(data.timeRemainingHalf ?? base.timeRemainingHalf);
   base.timeRemainingGame = Number(data.timeRemainingGame ?? base.timeRemainingGame);
   base.highlightName = (data.highlightName || "").trim();
+  base.oddsView = data.oddsView === "final" ? "final" : "halftime";
   base.lastScoreRefresh = data.lastScoreRefresh || "";
   return base;
 }
@@ -647,51 +650,46 @@ function buildWinningInfo() {
     rows.push(`<div class="row"><span>${scenario.label}</span><span>${name}</span></div>`);
   });
 
-  const likelihoodRows = buildLikelihoodRows();
-  if (likelihoodRows.length) {
-    rows.push(`<div class="row section"><span>Likelihoods (heuristic)</span><span></span></div>`);
-    rows.push(...likelihoodRows);
-  }
-
   if (state.highlightName) {
-    const odds = getUserOdds(state.highlightName);
+    const odds = getUserOdds(state.highlightName, state.oddsView);
     if (odds) {
+      const payout = getPayoutForView(state.oddsView);
+      const expectedValue = odds * payout;
       rows.push(
         `<div class="row"><span>${state.highlightName} total odds</span><span>${formatPercent(
           odds
+        )}</span></div>`
+      );
+      rows.push(
+        `<div class="row"><span>${state.highlightName} expected value</span><span>${formatMoney(
+          expectedValue
         )}</span></div>`
       );
     }
   }
 
   const content = rows.join("");
-  elements.winningInfo.innerHTML = content;
-  elements.winningInfoCompact.innerHTML = content;
+  if (elements.winningInfo) {
+    elements.winningInfo.innerHTML = content;
+  }
+  if (elements.winningInfoCompact) {
+    elements.winningInfoCompact.innerHTML = content;
+  }
 }
 
 function renderOddsSummary() {
   const participants = getParticipants();
   if (!participants.length) {
     elements.oddsSummary.innerHTML = "";
-    elements.oddsSummarySide.innerHTML = "";
     return;
   }
-  const minutesRemaining =
-    state.view === "halftime" ? state.timeRemainingHalf : state.timeRemainingGame;
-  const elapsedMinutes =
-    state.view === "halftime" ? Math.max(0, 30 - minutesRemaining) : Math.max(0, 60 - minutesRemaining);
-  const outcomes = getOutcomeProbabilities(minutesRemaining, elapsedMinutes);
-  if (!outcomes.length) {
+  const viewKey = state.oddsView;
+  const { oddsByName, hasOutcomes } = buildOddsByName(viewKey);
+  if (!hasOutcomes) {
     elements.oddsSummary.innerHTML = "";
-    elements.oddsSummarySide.innerHTML = "";
     return;
   }
-  const oddsByName = outcomes.reduce((acc, outcome) => {
-    const owner = state.grid[outcome.rowIndex][outcome.colIndex];
-    if (!owner) return acc;
-    acc[owner] = (acc[owner] || 0) + outcome.prob;
-    return acc;
-  }, {});
+  const payout = getPayoutForView(viewKey);
   const list = participants
     .map((participant) => ({
       name: participant.name,
@@ -699,20 +697,26 @@ function renderOddsSummary() {
     }))
     .sort((a, b) => b.odds - a.odds);
   const html = `
-    <div class="odds-title">User odds</div>
+    <div class="odds-title">
+      User odds
+      <div class="odds-toggle" role="group" aria-label="Odds view">
+        <button type="button" class="toggle ${viewKey === "halftime" ? "active" : ""}" data-odds="halftime">Halftime</button>
+        <button type="button" class="toggle ${viewKey === "final" ? "active" : ""}" data-odds="final">Final</button>
+      </div>
+    </div>
     ${list
       .map(
         (item) => `
           <div class="odds-row">
             <span>${item.name}</span>
-            <span>${formatPercent(item.odds)}</span>
+            <span>${formatPercent(item.odds)} • ${formatMoney(item.odds * payout)}</span>
           </div>
         `
       )
       .join("")}
   `;
   elements.oddsSummary.innerHTML = html;
-  elements.oddsSummarySide.innerHTML = html;
+  bindOddsToggle(elements.oddsSummary);
 }
 
 function buildLikelihoodRows() {
@@ -752,12 +756,12 @@ function buildLikelihoodRows() {
   return rows;
 }
 
-function getOutcomeProbabilities(minutesRemaining, elapsedMinutes) {
+function getOutcomeProbabilities(minutesRemaining, elapsedMinutes, viewKey = state.view) {
   const minutes = Math.max(0, Number(minutesRemaining || 0));
   const elapsed = Math.max(0, Number(elapsedMinutes || 0));
   const teamADist = buildScoreDistribution(minutes, state.scores.seahawks, elapsed);
   const teamBDist = buildScoreDistribution(minutes, state.scores.patriots, elapsed);
-  const digits = state.digits[state.view];
+  const digits = state.digits[viewKey];
   const outcomes = new Map();
 
   Object.entries(teamADist).forEach(([aPoints, aProb]) => {
@@ -851,18 +855,53 @@ function formatPercent(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function getUserOdds(name) {
+function getUserOdds(name, viewKey = state.view) {
   const minutesRemaining =
-    state.view === "halftime" ? state.timeRemainingHalf : state.timeRemainingGame;
+    viewKey === "halftime" ? state.timeRemainingHalf : state.timeRemainingGame;
   const elapsedMinutes =
-    state.view === "halftime" ? Math.max(0, 30 - minutesRemaining) : Math.max(0, 60 - minutesRemaining);
-  const outcomes = getOutcomeProbabilities(minutesRemaining, elapsedMinutes);
+    viewKey === "halftime" ? Math.max(0, 30 - minutesRemaining) : Math.max(0, 60 - minutesRemaining);
+  const outcomes = getOutcomeProbabilities(minutesRemaining, elapsedMinutes, viewKey);
   if (!outcomes.length) return 0;
   return outcomes.reduce((sum, outcome) => {
     const owner = state.grid[outcome.rowIndex][outcome.colIndex];
     if (!owner) return sum;
     return owner === name ? sum + outcome.prob : sum;
   }, 0);
+}
+
+function buildOddsByName(viewKey) {
+  const minutesRemaining =
+    viewKey === "halftime" ? state.timeRemainingHalf : state.timeRemainingGame;
+  const elapsedMinutes =
+    viewKey === "halftime" ? Math.max(0, 30 - minutesRemaining) : Math.max(0, 60 - minutesRemaining);
+  const outcomes = getOutcomeProbabilities(minutesRemaining, elapsedMinutes, viewKey);
+  if (!outcomes.length) return { oddsByName: {}, hasOutcomes: false };
+  const oddsByName = outcomes.reduce((acc, outcome) => {
+    const owner = state.grid[outcome.rowIndex][outcome.colIndex];
+    if (!owner) return acc;
+    acc[owner] = (acc[owner] || 0) + outcome.prob;
+    return acc;
+  }, {});
+  return { oddsByName, hasOutcomes: true };
+}
+
+function getPayoutForView(viewKey) {
+  const assignedSquares = GRID_SIZE * GRID_SIZE - getAvailableSquares().length;
+  const totalPot = assignedSquares * state.pricePerSquare;
+  const ratio = viewKey === "halftime" ? state.payoutRatio.halftime : state.payoutRatio.final;
+  return totalPot * ratio;
+}
+
+function bindOddsToggle(container) {
+  if (!container) return;
+  const buttons = container.querySelectorAll(".odds-toggle .toggle");
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.oddsView = button.dataset.odds === "final" ? "final" : "halftime";
+      saveState({ skipSync: true });
+      render();
+    });
+  });
 }
 
 function renderBoard() {
@@ -960,6 +999,8 @@ function renderPrintTable() {
   const teamBName = getTeamLabel(state.teamBName);
   elements.printTitle.textContent = state.gameTitle || "Super Bowl";
   elements.printSubtitle.textContent = `${teamAName} vs ${teamBName}`;
+  elements.printAxisCols.textContent = teamBName;
+  elements.printAxisRows.textContent = teamAName;
 
   const halftime = state.digits.halftime;
   const final = state.digits.final;
@@ -972,10 +1013,10 @@ function renderPrintTable() {
       const td = document.createElement("td");
       if (row < 2 && col < 2) {
         td.classList.add("header");
-        if (row === 0 && col === 0) td.textContent = `HT Cols (${teamBName})`;
-        if (row === 1 && col === 0) td.textContent = `Final Cols (${teamBName})`;
-        if (row === 0 && col === 1) td.textContent = `HT Rows (${teamAName})`;
-        if (row === 1 && col === 1) td.textContent = `Final Rows (${teamAName})`;
+        if (row === 0 && col === 0) td.textContent = "Halftime";
+        if (row === 1 && col === 1) td.textContent = "Final";
+        if (row === 0 && col === 1) td.textContent = "";
+        if (row === 1 && col === 0) td.textContent = "";
       } else if (row < 2) {
         td.classList.add("header");
         const index = col - 2;
@@ -987,6 +1028,7 @@ function renderPrintTable() {
       } else {
         const rowIndex = row - 2;
         const colIndex = col - 2;
+        td.classList.add("name-cell");
         td.textContent = state.grid[rowIndex][colIndex] || "";
       }
       tr.appendChild(td);
@@ -1042,17 +1084,9 @@ function renderParticipantSummary() {
     elements.summaryList.innerHTML = '<div class="hint">No squares assigned yet.</div>';
     return;
   }
-  const minutesRemaining =
-    state.view === "halftime" ? state.timeRemainingHalf : state.timeRemainingGame;
-  const elapsedMinutes =
-    state.view === "halftime" ? Math.max(0, 30 - minutesRemaining) : Math.max(0, 60 - minutesRemaining);
-  const outcomes = getOutcomeProbabilities(minutesRemaining, elapsedMinutes);
-  const oddsByName = outcomes.reduce((acc, outcome) => {
-    const owner = state.grid[outcome.rowIndex][outcome.colIndex];
-    if (!owner) return acc;
-    acc[owner] = (acc[owner] || 0) + outcome.prob;
-    return acc;
-  }, {});
+  const viewKey = state.oddsView;
+  const { oddsByName } = buildOddsByName(viewKey);
+  const payout = getPayoutForView(viewKey);
   elements.summaryList.innerHTML = participants
     .map(
       (participant) => `
@@ -1060,7 +1094,9 @@ function renderParticipantSummary() {
           <span>${participant.name}</span>
           <span class="count">${participant.count} • ${formatMoney(
         participant.total
-      )} • ${formatPercent(oddsByName[participant.name] || 0)}</span>
+      )} • ${formatPercent(oddsByName[participant.name] || 0)} • ${formatMoney(
+        (oddsByName[participant.name] || 0) * payout
+      )}</span>
         </div>
       `
     )

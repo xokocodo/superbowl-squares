@@ -44,8 +44,8 @@
         </div>
 
         <div class="board-shell">
-          <div class="axis-label rows-label" id="rows-label">Seahawks rows</div>
-          <div class="axis-label cols-label" id="cols-label">Patriots columns</div>
+          <div class="axis-label rows-label" id="rows-label">Seahawks</div>
+          <div class="axis-label cols-label" id="cols-label">Patriots</div>
           <div id="board-grid" class="board-grid" aria-label="Squares grid"></div>
           <div id="print-grid" class="print-grid" aria-hidden="true"></div>
         </div>
@@ -78,14 +78,21 @@
             <div><strong>Rows</strong> = Team A</div>
             <div><strong>Cols</strong> = Team B</div>
           </div>
-          <div class="print-table-wrap">
-            <table id="print-table" class="print-table" aria-label="Printable squares board"></table>
+          <div class="print-board">
+            <div class="print-axis-top" id="print-axis-cols"></div>
+            <div class="print-axis-left" id="print-axis-rows"></div>
+            <div class="print-table-wrap">
+              <table id="print-table" class="print-table" aria-label="Printable squares board"></table>
+            </div>
           </div>
         </section>
         <div class="card board-status" id="board-status">
           <h2>Current winners</h2>
           <div class="winning-info" id="winning-info-compact"></div>
-          <div class="odds-summary" id="odds-summary"></div>
+        </div>
+        <div class="card board-status" id="odds-section">
+          <h2>User odds</h2>
+          <div class="odds-summary winning-info" id="odds-summary"></div>
         </div>
       </section>
 
@@ -156,8 +163,6 @@
             <div class="hint" id="score-refreshed"></div>
           </div>
           <div class="game-info" id="game-info"></div>
-          <div class="winning-info" id="winning-info"></div>
-          <div class="odds-summary" id="odds-summary-side"></div>
         </section>
 
         <section class="card">
