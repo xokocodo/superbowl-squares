@@ -1,6 +1,7 @@
 const GRID_SIZE = 10;
 const STORAGE_KEY = "superbowl-squares-2026";
 const SCORE_REFRESH_MS = 30000;
+const ADMIN_KEY_STORAGE = "superbowl-squares-admin-key";
 
 const elements = {
   appMain: document.getElementById("app-main"),
@@ -54,6 +55,8 @@ const elements = {
   teamALogoInput: document.getElementById("team-a-logo-input"),
   teamBInput: document.getElementById("team-b-input"),
   teamBLogoInput: document.getElementById("team-b-logo-input"),
+  adminKeyInput: document.getElementById("admin-key-input"),
+  syncStatus: document.getElementById("sync-status"),
   ratioHalftime: document.getElementById("ratio-halftime"),
   ratioFinal: document.getElementById("ratio-final"),
   adminToggle: document.getElementById("admin-toggle"),
@@ -110,6 +113,9 @@ const defaultState = () => ({
 });
 
 let state = loadState();
+let syncTimeout = null;
+let lastSyncOk = false;
+let lastSyncMessage = "Backend: not connected";
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -205,8 +211,90 @@ function setLogo(element, url, altText) {
   element.alt = altText;
 }
 
-function saveState() {
+function saveState(options = {}) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (!options.skipSync) scheduleSync();
+}
+
+function getAdminKey() {
+  return localStorage.getItem(ADMIN_KEY_STORAGE) || "";
+}
+
+function setAdminKey(value) {
+  if (!value) {
+    localStorage.removeItem(ADMIN_KEY_STORAGE);
+  } else {
+    localStorage.setItem(ADMIN_KEY_STORAGE, value);
+  }
+}
+
+function isAdmin() {
+  return Boolean(getAdminKey());
+}
+
+function scheduleSync() {
+  if (!isAdmin()) return;
+  if (syncTimeout) window.clearTimeout(syncTimeout);
+  syncTimeout = window.setTimeout(() => {
+    syncTimeout = null;
+    pushBoardToServer();
+  }, 600);
+}
+
+function setSyncStatus(message, ok = false) {
+  lastSyncOk = ok;
+  lastSyncMessage = message;
+  elements.syncStatus.textContent = message;
+}
+
+function serializeStateForServer() {
+  const {
+    grid,
+    digits,
+    locked,
+    view,
+    gameTitle,
+    teamAName,
+    teamBName,
+    teamALogo,
+    teamBLogo,
+    pricePerSquare,
+    payoutRatio,
+    scores,
+    gameClock,
+    timeRemainingHalf,
+    timeRemainingGame,
+  } = state;
+  return {
+    grid,
+    digits,
+    locked,
+    view,
+    gameTitle,
+    teamAName,
+    teamBName,
+    teamALogo,
+    teamBLogo,
+    pricePerSquare,
+    payoutRatio,
+    scores,
+    gameClock,
+    timeRemainingHalf,
+    timeRemainingGame,
+  };
+}
+
+function applyServerState(serverState) {
+  const localCollapsed = state.collapsed;
+  const localActive = state.activeName;
+  const localAdminMode = state.adminMode;
+  const localLastRefresh = state.lastScoreRefresh;
+  state = normalizeState(serverState);
+  state.collapsed = localCollapsed;
+  state.activeName = localActive;
+  state.adminMode = localAdminMode;
+  state.lastScoreRefresh = localLastRefresh;
+  saveState({ skipSync: true });
 }
 
 function buildGrid() {
@@ -273,6 +361,10 @@ function handleSquareClick(event) {
   const row = Number(event.currentTarget.dataset.row);
   const col = Number(event.currentTarget.dataset.col);
   const current = state.grid[row][col];
+  if (!isAdmin()) {
+    elements.activeDisplay.textContent = "Read-only mode. Admin key required.";
+    return;
+  }
   if (current) {
     if (!state.adminMode) return;
     if (!state.activeName || state.activeName === current) {
@@ -310,6 +402,10 @@ function getAvailableSquares() {
 function pickRandomSquares(count) {
   if (!state.activeName) {
     elements.activeDisplay.textContent = "Set your name before picking squares.";
+    return;
+  }
+  if (!isAdmin()) {
+    elements.activeDisplay.textContent = "Read-only mode. Admin key required.";
     return;
   }
   const available = getAvailableSquares();
@@ -360,6 +456,10 @@ function shuffleDigits() {
 }
 
 function randomizeDigits(force = false) {
+  if (!isAdmin()) {
+    alert("Read-only mode. Admin key required.");
+    return;
+  }
   if (!isGridFull()) {
     alert("All 100 squares must be assigned before randomizing.");
     return;
@@ -377,6 +477,10 @@ function randomizeDigits(force = false) {
 }
 
 function rerandomizeDigits() {
+  if (!isAdmin()) {
+    alert("Read-only mode. Admin key required.");
+    return;
+  }
   if (!state.adminMode) return;
   const confirmAction = window.confirm(
     "Re-randomize all digits? This will change winners."
@@ -386,6 +490,10 @@ function rerandomizeDigits() {
 }
 
 function clearBoard() {
+  if (!isAdmin()) {
+    alert("Read-only mode. Admin key required.");
+    return;
+  }
   if (!state.adminMode) return;
   const confirmAction = window.confirm("Clear all squares and digits?");
   if (!confirmAction) return;
@@ -731,6 +839,7 @@ function render() {
   const teamBName = getTeamLabel(state.teamBName);
   const teamAShort = normalizeTeamShort(teamAName);
   const teamBShort = normalizeTeamShort(teamBName);
+  const admin = isAdmin();
   elements.viewHalftime.classList.toggle("active", state.view === "halftime");
   elements.viewFinal.classList.toggle("active", state.view === "final");
   elements.gameTitle.textContent = state.gameTitle || "Super Bowl";
@@ -766,6 +875,8 @@ function render() {
   elements.teamBInput.value = state.teamBName;
   elements.teamALogoInput.value = state.teamALogo;
   elements.teamBLogoInput.value = state.teamBLogo;
+  elements.adminKeyInput.value = admin ? getAdminKey() : "";
+  elements.syncStatus.textContent = lastSyncMessage;
   elements.ratioHalftime.value = halftimePercent;
   elements.ratioFinal.value = finalPercent;
   elements.totalPot.textContent = formatMoney(totalPot);
@@ -783,13 +894,14 @@ function render() {
   elements.adminToggle.checked = state.adminMode;
 
   elements.randomizeDigits.disabled =
-    !isGridFull() || state.locked.halftime || state.locked.final;
-  elements.rerandomize.disabled = !state.adminMode;
-  elements.clearBoard.disabled = !state.adminMode;
-  const quickPickDisabled = !state.activeName || remaining === 0;
+    !admin || !isGridFull() || state.locked.halftime || state.locked.final;
+  elements.rerandomize.disabled = !admin || !state.adminMode;
+  elements.clearBoard.disabled = !admin || !state.adminMode;
+  const quickPickDisabled = !admin || !state.activeName || remaining === 0;
   elements.pick1.disabled = quickPickDisabled;
   elements.pick5.disabled = quickPickDisabled;
   elements.pick10.disabled = quickPickDisabled;
+  elements.adminToggle.disabled = !admin;
 
   renderBoard();
   renderPrintBoard();
@@ -830,6 +942,10 @@ function downloadBlob(blob, filename) {
 }
 
 function importFromFile(file) {
+  if (!isAdmin()) {
+    alert("Read-only mode. Admin key required.");
+    return;
+  }
   const reader = new FileReader();
   reader.onload = () => {
     const content = reader.result;
@@ -992,6 +1108,46 @@ async function testApi() {
   }
 }
 
+async function fetchBoardFromServer() {
+  try {
+    const response = await fetch("/api/board");
+    if (response.status === 404 || response.status === 204) {
+      setSyncStatus("Backend: no shared board yet", true);
+      return;
+    }
+    if (!response.ok) throw new Error("Network error");
+    const payload = await response.json();
+    if (!payload || !payload.state) {
+      setSyncStatus("Backend: no shared board yet", true);
+      return;
+    }
+    applyServerState(payload.state);
+    setSyncStatus("Backend: synced", true);
+    render();
+  } catch (error) {
+    setSyncStatus("Backend: unavailable", false);
+  }
+}
+
+async function pushBoardToServer() {
+  try {
+    const adminKey = getAdminKey();
+    if (!adminKey) return;
+    const response = await fetch("/api/board", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-key": adminKey,
+      },
+      body: JSON.stringify({ state: serializeStateForServer() }),
+    });
+    if (!response.ok) throw new Error("Write failed");
+    setSyncStatus("Backend: saved", true);
+  } catch (error) {
+    setSyncStatus("Backend: save failed", false);
+  }
+}
+
 function startAutoFetch() {
   fetchScore();
   window.setInterval(fetchScore, SCORE_REFRESH_MS);
@@ -1036,6 +1192,12 @@ function setupListeners() {
     state.pricePerSquare = Number(event.target.value || 0);
     saveState();
     render();
+  });
+  elements.adminKeyInput.addEventListener("input", (event) => {
+    setAdminKey(event.target.value.trim());
+    setSyncStatus("Backend: pending", false);
+    render();
+    fetchBoardFromServer();
   });
   elements.gameTitleInput.addEventListener("input", (event) => {
     state.gameTitle = event.target.value.trim();
@@ -1097,4 +1259,7 @@ buildGrid();
 buildPrintGrid();
 setupListeners();
 render();
-startAutoFetch();
+fetchBoardFromServer().finally(() => {
+  render();
+  startAutoFetch();
+});

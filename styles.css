@@ -410,6 +410,10 @@ button:disabled {
   margin: 0;
 }
 
+#sync-status {
+  margin-top: -6px;
+}
+
 .participants-list {
   display: grid;
   gap: 10px;
