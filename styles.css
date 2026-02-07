@@ -170,6 +170,11 @@ textarea {
   gap: 10px;
 }
 
+.view-toggle.below-board {
+  justify-self: center;
+  margin-top: 8px;
+}
+
 .board-score-header {
   display: flex;
   justify-content: space-between;
@@ -282,7 +287,7 @@ button:disabled {
 
 .axis-label {
   color: var(--muted);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   letter-spacing: 0.5px;
 }
@@ -390,6 +395,12 @@ button:disabled {
   font-weight: 600;
 }
 
+.cell.square.same-name {
+  border-color: rgba(250, 204, 21, 0.75);
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.35);
+  background: rgba(250, 204, 21, 0.12);
+}
+
 .cell.header.highlight {
   background: rgba(56, 189, 248, 0.25);
   color: #e0f2fe;
@@ -445,6 +456,69 @@ button:disabled {
 .participants-list {
   display: grid;
   gap: 10px;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal.open {
+  display: flex;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 7, 18, 0.7);
+}
+
+.modal-card {
+  position: relative;
+  background: var(--card);
+  border-radius: 18px;
+  padding: 18px;
+  width: min(520px, 90vw);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 12px;
+  z-index: 1;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.summary-list {
+  display: grid;
+  gap: 8px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.summary-row:hover {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.summary-row .count {
+  color: var(--accent-2);
+  font-weight: 600;
 }
 
 .quick-picks {
@@ -507,6 +581,22 @@ button:disabled {
   justify-self: start;
 }
 
+.game-info {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.game-info .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .winning-info {
   background: rgba(255, 255, 255, 0.03);
   border-radius: 14px;
@@ -566,6 +656,28 @@ button:disabled {
   border: none;
   padding: 0;
   color: var(--muted);
+}
+
+.odds-summary {
+  margin-top: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.odds-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.odds-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .settings-body {
@@ -663,9 +775,13 @@ button:disabled {
   }
 
   .board-shell {
-    overflow: hidden;
+    overflow: visible;
     padding-left: 16px;
-    padding-top: 16px;
+    padding-top: 18px;
+  }
+
+  .view-toggle.below-board {
+    justify-self: center;
   }
 
   .board-grid {
@@ -680,7 +796,16 @@ button:disabled {
   }
 
   .axis-label {
-    font-size: 14px;
+    font-size: 16px;
+  }
+
+  .axis-label.rows-label {
+    left: 8px;
+    transform: translate(-100%, -50%) rotate(180deg);
+  }
+
+  .axis-label.cols-label {
+    top: 8px;
   }
 
   .side-panel {
@@ -693,6 +818,10 @@ button:disabled {
 
   .board-status {
     display: grid;
+  }
+
+  .game-info {
+    display: none;
   }
 }
 

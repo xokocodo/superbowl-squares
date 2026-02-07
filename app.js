@@ -1,7 +1,20 @@
 const GRID_SIZE = 10;
 const STORAGE_KEY = "superbowl-squares-2026";
 const SCORE_REFRESH_MS = 30000;
+const BOARD_REFRESH_MS = 30000;
 const ADMIN_KEY_STORAGE = "superbowl-squares-admin-key";
+const DIGIT_PRIOR = {
+  0: 0.196,
+  1: 0.106,
+  2: 0.038,
+  3: 0.131,
+  4: 0.089,
+  5: 0.042,
+  6: 0.086,
+  7: 0.196,
+  8: 0.066,
+  9: 0.049,
+};
 
 const elements = {
   appMain: document.getElementById("app-main"),
@@ -11,6 +24,9 @@ const elements = {
   printTitle: document.getElementById("print-title"),
   printSubtitle: document.getElementById("print-subtitle"),
   printTable: document.getElementById("print-table"),
+  boardToolbar: document.querySelector(".board-toolbar"),
+  boardShell: document.querySelector(".board-shell"),
+  viewToggle: document.querySelector(".view-toggle"),
   boardScore: document.getElementById("board-score"),
   boardScoreClock: document.getElementById("board-score-clock"),
   boardScoreTeamA: document.getElementById("board-score-team-a"),
@@ -53,8 +69,11 @@ const elements = {
   testApi: document.getElementById("test-api"),
   fetchStatus: document.getElementById("fetch-status"),
   scoreRefreshed: document.getElementById("score-refreshed"),
+  gameInfo: document.getElementById("game-info"),
   winningInfo: document.getElementById("winning-info"),
   winningInfoCompact: document.getElementById("winning-info-compact"),
+  oddsSummary: document.getElementById("odds-summary"),
+  oddsSummarySide: document.getElementById("odds-summary-side"),
   priceInput: document.getElementById("price-input"),
   gameTitleInput: document.getElementById("game-title-input"),
   teamAInput: document.getElementById("team-a-input"),
@@ -76,6 +95,11 @@ const elements = {
   payoutFinal: document.getElementById("payout-final"),
   payoutHalftimeLabel: document.getElementById("payout-halftime-label"),
   payoutFinalLabel: document.getElementById("payout-final-label"),
+  openSummary: document.getElementById("open-summary"),
+  summaryModal: document.getElementById("summary-modal"),
+  summaryBackdrop: document.getElementById("summary-backdrop"),
+  closeSummary: document.getElementById("close-summary"),
+  summaryList: document.getElementById("summary-list"),
 };
 
 const squareCells = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE));
@@ -113,8 +137,10 @@ const defaultState = () => ({
   adminMode: false,
   scores: { seahawks: 0, patriots: 0 },
   gameClock: "",
+  gameInfo: {},
   timeRemainingHalf: 15,
   timeRemainingGame: 60,
+  highlightName: "",
   lastScoreRefresh: "",
 });
 
@@ -169,8 +195,10 @@ function normalizeState(data) {
     patriots: Number(data.scores?.patriots || 0),
   };
   base.gameClock = data.gameClock || "";
+  base.gameInfo = data.gameInfo || {};
   base.timeRemainingHalf = Number(data.timeRemainingHalf ?? base.timeRemainingHalf);
   base.timeRemainingGame = Number(data.timeRemainingGame ?? base.timeRemainingGame);
+  base.highlightName = (data.highlightName || "").trim();
   base.lastScoreRefresh = data.lastScoreRefresh || "";
   return base;
 }
@@ -203,6 +231,18 @@ function normalizeTeamShort(name) {
 
 function isMobileView() {
   return window.matchMedia("(max-width: 820px)").matches;
+}
+
+function getNameFontSize(name) {
+  const length = name.trim().length;
+  if (length <= 6) return "14px";
+  if (length <= 9) return "12px";
+  if (length <= 12) return "11px";
+  return "10px";
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function getTeamLabel(name) {
@@ -272,6 +312,7 @@ function serializeStateForServer() {
     payoutRatio,
     scores,
     gameClock,
+    gameInfo,
     timeRemainingHalf,
     timeRemainingGame,
   } = state;
@@ -289,6 +330,7 @@ function serializeStateForServer() {
     payoutRatio,
     scores,
     gameClock,
+    gameInfo,
     timeRemainingHalf,
     timeRemainingGame,
   };
@@ -371,6 +413,19 @@ function handleSquareClick(event) {
   const row = Number(event.currentTarget.dataset.row);
   const col = Number(event.currentTarget.dataset.col);
   const current = state.grid[row][col];
+  const locked = state.locked.halftime || state.locked.final;
+  if (!isAdmin() || locked) {
+    if (!current) {
+      state.highlightName = "";
+    } else if (state.highlightName === current) {
+      state.highlightName = "";
+    } else {
+      state.highlightName = current;
+    }
+    saveState({ skipSync: true });
+    render();
+    return;
+  }
   if (!isAdmin()) {
     elements.activeDisplay.textContent = "Read-only mode. Admin key required.";
     return;
@@ -444,6 +499,17 @@ function setView(view) {
   state.view = view;
   saveState();
   render();
+}
+
+function placeViewToggle() {
+  if (!elements.viewToggle || !elements.boardToolbar || !elements.boardShell) return;
+  if (isMobileView()) {
+    elements.boardShell.after(elements.viewToggle);
+    elements.viewToggle.classList.add("below-board");
+  } else {
+    elements.boardToolbar.prepend(elements.viewToggle);
+    elements.viewToggle.classList.remove("below-board");
+  }
 }
 
 function toggleSidebar() {
@@ -587,9 +653,66 @@ function buildWinningInfo() {
     rows.push(...likelihoodRows);
   }
 
+  if (state.highlightName) {
+    const odds = getUserOdds(state.highlightName);
+    if (odds) {
+      rows.push(
+        `<div class="row"><span>${state.highlightName} total odds</span><span>${formatPercent(
+          odds
+        )}</span></div>`
+      );
+    }
+  }
+
   const content = rows.join("");
   elements.winningInfo.innerHTML = content;
   elements.winningInfoCompact.innerHTML = content;
+}
+
+function renderOddsSummary() {
+  const participants = getParticipants();
+  if (!participants.length) {
+    elements.oddsSummary.innerHTML = "";
+    elements.oddsSummarySide.innerHTML = "";
+    return;
+  }
+  const minutesRemaining =
+    state.view === "halftime" ? state.timeRemainingHalf : state.timeRemainingGame;
+  const elapsedMinutes =
+    state.view === "halftime" ? Math.max(0, 30 - minutesRemaining) : Math.max(0, 60 - minutesRemaining);
+  const outcomes = getOutcomeProbabilities(minutesRemaining, elapsedMinutes);
+  if (!outcomes.length) {
+    elements.oddsSummary.innerHTML = "";
+    elements.oddsSummarySide.innerHTML = "";
+    return;
+  }
+  const oddsByName = outcomes.reduce((acc, outcome) => {
+    const owner = state.grid[outcome.rowIndex][outcome.colIndex];
+    if (!owner) return acc;
+    acc[owner] = (acc[owner] || 0) + outcome.prob;
+    return acc;
+  }, {});
+  const list = participants
+    .map((participant) => ({
+      name: participant.name,
+      odds: oddsByName[participant.name] || 0,
+    }))
+    .sort((a, b) => b.odds - a.odds);
+  const html = `
+    <div class="odds-title">User odds</div>
+    ${list
+      .map(
+        (item) => `
+          <div class="odds-row">
+            <span>${item.name}</span>
+            <span>${formatPercent(item.odds)}</span>
+          </div>
+        `
+      )
+      .join("")}
+  `;
+  elements.oddsSummary.innerHTML = html;
+  elements.oddsSummarySide.innerHTML = html;
 }
 
 function buildLikelihoodRows() {
@@ -599,7 +722,9 @@ function buildLikelihoodRows() {
   }
   const minutesRemaining =
     state.view === "halftime" ? state.timeRemainingHalf : state.timeRemainingGame;
-  const outcomes = getOutcomeProbabilities(minutesRemaining);
+  const elapsedMinutes =
+    state.view === "halftime" ? Math.max(0, 30 - minutesRemaining) : Math.max(0, 60 - minutesRemaining);
+  const outcomes = getOutcomeProbabilities(minutesRemaining, elapsedMinutes);
   if (!outcomes.length) return [];
   const currentWinner = getWinnerCoords(state.scores, state.view);
   const rows = [];
@@ -627,10 +752,11 @@ function buildLikelihoodRows() {
   return rows;
 }
 
-function getOutcomeProbabilities(minutesRemaining) {
+function getOutcomeProbabilities(minutesRemaining, elapsedMinutes) {
   const minutes = Math.max(0, Number(minutesRemaining || 0));
-  const teamADist = buildScoreDistribution(minutes);
-  const teamBDist = buildScoreDistribution(minutes);
+  const elapsed = Math.max(0, Number(elapsedMinutes || 0));
+  const teamADist = buildScoreDistribution(minutes, state.scores.seahawks, elapsed);
+  const teamBDist = buildScoreDistribution(minutes, state.scores.patriots, elapsed);
   const digits = state.digits[state.view];
   const outcomes = new Map();
 
@@ -643,26 +769,35 @@ function getOutcomeProbabilities(minutesRemaining) {
       const rowIndex = digits.rows.indexOf(aDigit);
       const colIndex = digits.cols.indexOf(bDigit);
       if (rowIndex === -1 || colIndex === -1) return;
+      const digitWeight =
+        (DIGIT_PRIOR[aDigit] ?? 0.1) * (DIGIT_PRIOR[bDigit] ?? 0.1);
       const key = `${rowIndex}-${colIndex}`;
       const current = outcomes.get(key) || { prob: 0, rowIndex, colIndex };
-      current.prob += totalProb;
+      current.prob += totalProb * digitWeight;
       outcomes.set(key, current);
     });
   });
 
   const list = Array.from(outcomes.values()).sort((a, b) => b.prob - a.prob);
+  const total = list.reduce((sum, item) => sum + item.prob, 0);
+  if (!total) return [];
   return list.map((item) => ({
     key: `${item.rowIndex}-${item.colIndex}`,
-    prob: item.prob,
+    prob: item.prob / total,
     label: `${digits.rows[item.rowIndex]}-${digits.cols[item.colIndex]} digits`,
     name: getSquareLabel(item.rowIndex, item.colIndex),
+    rowIndex: item.rowIndex,
+    colIndex: item.colIndex,
   }));
 }
 
-function buildScoreDistribution(minutesRemaining) {
+function buildScoreDistribution(minutesRemaining, currentScore, elapsedMinutes) {
   if (minutesRemaining <= 0) return { 0: 1 };
-  const lambda = minutesRemaining / 8;
-  const maxEvents = Math.max(1, Math.min(6, Math.round(minutesRemaining / 6) + 1));
+  const baselinePointsPerMin = 0.35;
+  const pace = elapsedMinutes > 1 ? currentScore / elapsedMinutes : baselinePointsPerMin;
+  const paceFactor = clamp(pace / baselinePointsPerMin, 0.6, 1.8);
+  const lambda = (minutesRemaining / 8) * paceFactor;
+  const maxEvents = Math.max(1, Math.min(7, Math.round((minutesRemaining / 6) * paceFactor) + 1));
   const increments = [
     { points: 7, weight: 0.5 },
     { points: 3, weight: 0.3 },
@@ -678,7 +813,7 @@ function buildScoreDistribution(minutesRemaining) {
   const totalWeight = eventWeights.reduce((sum, value) => sum + value, 0);
   const normalizedEvents = eventWeights.map((value) => value / totalWeight);
 
-  const maxPoints = 35;
+  const maxPoints = 42;
   const distribution = {};
   normalizedEvents.forEach((eventProb, eventCount) => {
     let dist = { 0: 1 };
@@ -713,12 +848,35 @@ function poisson(lambda, k) {
 }
 
 function formatPercent(value) {
-  return `${Math.round(value * 100)}%`;
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+function getUserOdds(name) {
+  const minutesRemaining =
+    state.view === "halftime" ? state.timeRemainingHalf : state.timeRemainingGame;
+  const elapsedMinutes =
+    state.view === "halftime" ? Math.max(0, 30 - minutesRemaining) : Math.max(0, 60 - minutesRemaining);
+  const outcomes = getOutcomeProbabilities(minutesRemaining, elapsedMinutes);
+  if (!outcomes.length) return 0;
+  return outcomes.reduce((sum, outcome) => {
+    const owner = state.grid[outcome.rowIndex][outcome.colIndex];
+    if (!owner) return sum;
+    return owner === name ? sum + outcome.prob : sum;
+  }, 0);
 }
 
 function renderBoard() {
   const digits = state.digits[state.view];
   const winner = getWinnerCoords(state.scores, state.view);
+  const minutesRemaining =
+    state.view === "halftime" ? state.timeRemainingHalf : state.timeRemainingGame;
+  const elapsedMinutes =
+    state.view === "halftime" ? Math.max(0, 30 - minutesRemaining) : Math.max(0, 60 - minutesRemaining);
+  const outcomes = getOutcomeProbabilities(minutesRemaining, elapsedMinutes);
+  const oddsMap = outcomes.reduce((acc, outcome) => {
+    acc[`${outcome.rowIndex}-${outcome.colIndex}`] = outcome.prob;
+    return acc;
+  }, {});
   rowHeaderCells.forEach((cell, index) => {
     cell.textContent = digits.rows[index] ?? "-";
     cell.classList.toggle("highlight", Boolean(winner && winner.rowIndex === index));
@@ -734,18 +892,31 @@ function renderBoard() {
       const name = state.grid[row][col];
       if (!name) {
         cell.textContent = "";
+        cell.style.fontSize = "";
       } else if (isMobileView()) {
         cell.textContent = name.trim().charAt(0).toUpperCase();
+        cell.style.fontSize = "";
       } else {
         cell.textContent = name;
+        cell.style.fontSize = getNameFontSize(name);
       }
       cell.classList.toggle("assigned", Boolean(name));
+      cell.classList.toggle(
+        "same-name",
+        Boolean(state.highlightName && name === state.highlightName)
+      );
       const isWinner = winner && winner.rowIndex === row && winner.colIndex === col;
       const isRow = winner && winner.rowIndex === row;
       const isCol = winner && winner.colIndex === col;
       cell.classList.toggle("highlight-row", Boolean(isRow));
       cell.classList.toggle("highlight-col", Boolean(isCol));
       cell.classList.toggle("winner", Boolean(isWinner));
+      const oddsKey = `${row}-${col}`;
+      if (oddsMap[oddsKey] != null) {
+        cell.title = `Chance: ${formatPercent(oddsMap[oddsKey])}`;
+      } else {
+        cell.title = "Chance: —";
+      }
     }
   }
 }
@@ -824,6 +995,26 @@ function renderPrintTable() {
   }
 }
 
+function renderGameInfo() {
+  const info = state.gameInfo || {};
+  const rows = [];
+  if (info.statusDetail) rows.push(["Status", info.statusDetail]);
+  if (info.period) rows.push(["Period", `Q${info.period}`]);
+  if (info.clock) rows.push(["Clock", info.clock]);
+  if (info.possession) rows.push(["Possession", info.possession]);
+  if (info.downDistance) rows.push(["Down & distance", info.downDistance]);
+  if (info.yardLine) rows.push(["Ball on", info.yardLine]);
+  if (info.lastPlay) rows.push(["Last play", info.lastPlay]);
+  if (!rows.length) {
+    elements.gameInfo.innerHTML =
+      '<div class="row"><span>No extra game info.</span><span></span></div>';
+    return;
+  }
+  elements.gameInfo.innerHTML = rows
+    .map(([label, value]) => `<div class="row"><span>${label}</span><span>${value}</span></div>`)
+    .join("");
+}
+
 function renderParticipants() {
   const participants = getParticipants();
   if (!participants.length) {
@@ -845,6 +1036,45 @@ function renderParticipants() {
     .join("");
 }
 
+function renderParticipantSummary() {
+  const participants = getParticipants();
+  if (!participants.length) {
+    elements.summaryList.innerHTML = '<div class="hint">No squares assigned yet.</div>';
+    return;
+  }
+  const minutesRemaining =
+    state.view === "halftime" ? state.timeRemainingHalf : state.timeRemainingGame;
+  const elapsedMinutes =
+    state.view === "halftime" ? Math.max(0, 30 - minutesRemaining) : Math.max(0, 60 - minutesRemaining);
+  const outcomes = getOutcomeProbabilities(minutesRemaining, elapsedMinutes);
+  const oddsByName = outcomes.reduce((acc, outcome) => {
+    const owner = state.grid[outcome.rowIndex][outcome.colIndex];
+    if (!owner) return acc;
+    acc[owner] = (acc[owner] || 0) + outcome.prob;
+    return acc;
+  }, {});
+  elements.summaryList.innerHTML = participants
+    .map(
+      (participant) => `
+        <div class="summary-row" data-name="${participant.name}">
+          <span>${participant.name}</span>
+          <span class="count">${participant.count} • ${formatMoney(
+        participant.total
+      )} • ${formatPercent(oddsByName[participant.name] || 0)}</span>
+        </div>
+      `
+    )
+    .join("");
+  elements.summaryList.querySelectorAll(".summary-row").forEach((row) => {
+    row.addEventListener("click", () => {
+      const name = row.dataset.name || "";
+      state.highlightName = state.highlightName === name ? "" : name;
+      saveState({ skipSync: true });
+      render();
+    });
+  });
+}
+
 function render() {
   const remaining = getAvailableSquares().length;
   const assignedSquares = GRID_SIZE * GRID_SIZE - remaining;
@@ -856,6 +1086,7 @@ function render() {
   const teamAShort = normalizeTeamShort(teamAName);
   const teamBShort = normalizeTeamShort(teamBName);
   const admin = isAdmin();
+  placeViewToggle();
   elements.viewHalftime.classList.toggle("active", state.view === "halftime");
   elements.viewFinal.classList.toggle("active", state.view === "final");
   elements.gameTitle.textContent = state.gameTitle || "Super Bowl";
@@ -912,6 +1143,7 @@ function render() {
   elements.scoreRefreshed.textContent = state.lastScoreRefresh
     ? `Score last refreshed at ${new Date(state.lastScoreRefresh).toLocaleTimeString()}`
     : "Score last refreshed at —";
+  renderGameInfo();
   elements.adminToggle.checked = state.adminMode;
 
   elements.randomizeDigits.disabled =
@@ -928,7 +1160,11 @@ function render() {
   renderPrintBoard();
   renderPrintTable();
   renderParticipants();
+  if (elements.summaryModal.classList.contains("open")) {
+    renderParticipantSummary();
+  }
   buildWinningInfo();
+  renderOddsSummary();
 }
 
 function exportJson() {
@@ -1097,6 +1333,23 @@ async function fetchScore() {
     } else {
       state.gameClock = "";
     }
+    const situation = competition.situation || {};
+    const possessionTeam =
+      situation.possession?.team?.shortDisplayName ||
+      situation.possession?.team?.abbreviation ||
+      "";
+    state.gameInfo = {
+      statusDetail: status.type?.shortDetail || "",
+      period: status.period || "",
+      clock: status.displayClock || "",
+      possession: possessionTeam,
+      downDistance: situation.shortDownDistanceText || situation.downDistanceText || "",
+      yardLine: situation.possessionText || "",
+      lastPlay: situation.lastPlay?.text || "",
+    };
+    if (period) {
+      state.view = Number(period) >= 3 ? "final" : "halftime";
+    }
     state.lastScoreRefresh = new Date().toISOString();
     elements.fetchStatus.textContent = `Updated ${new Date().toLocaleTimeString()}`;
     saveState();
@@ -1172,6 +1425,11 @@ async function pushBoardToServer() {
 function startAutoFetch() {
   fetchScore();
   window.setInterval(fetchScore, SCORE_REFRESH_MS);
+}
+
+function startBoardRefresh() {
+  if (isAdmin()) return;
+  window.setInterval(fetchBoardFromServer, BOARD_REFRESH_MS);
 }
 
 function setupListeners() {
@@ -1274,6 +1532,19 @@ function setupListeners() {
     importFromFile(file);
     event.target.value = "";
   });
+  elements.openSummary.addEventListener("click", () => {
+    elements.summaryModal.classList.add("open");
+    elements.summaryModal.setAttribute("aria-hidden", "false");
+    renderParticipantSummary();
+  });
+  elements.closeSummary.addEventListener("click", () => {
+    elements.summaryModal.classList.remove("open");
+    elements.summaryModal.setAttribute("aria-hidden", "true");
+  });
+  elements.summaryBackdrop.addEventListener("click", () => {
+    elements.summaryModal.classList.remove("open");
+    elements.summaryModal.setAttribute("aria-hidden", "true");
+  });
   window.addEventListener("resize", render);
 }
 
@@ -1284,4 +1555,5 @@ render();
 fetchBoardFromServer().finally(() => {
   render();
   startAutoFetch();
+  startBoardRefresh();
 });

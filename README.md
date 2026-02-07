@@ -17,6 +17,7 @@ Lightweight Superbowl squares board with a sleek UI, printable PDF view, and opt
 - Payout split (default 30% halftime / 70% final).
 - Live score auto‑fetch (ESPN) with manual fallback.
 - Current winner + scenario outcomes (+3/+7 for each team).
+- Likelihood model for square/user win odds (heuristic).
 - Print‑friendly PDF view.
 - Optional shared state backend (Cloudflare Pages Functions + KV).
 
@@ -34,6 +35,18 @@ This app supports a lightweight admin model:
 - **Admins** paste the **Admin key** in Settings to enable editing and syncing.
 
 The admin key is stored in the browser’s local storage and sent only to the backend for write operations.
+
+## Likelihood model (heuristic)
+The app estimates square win likelihoods using a simple, transparent model:
+- **Score + time remaining** determine expected future scoring pace.
+- Each team’s remaining points are modeled as a distribution of scoring events.
+- Those outcomes are converted into **last‑digit probabilities** for each team.
+- Historical NFL **last‑digit priors** bias digits toward common outcomes (0/7/3/1).
+- All square probabilities are normalized to **sum to 1**.
+
+This produces:
+- Per‑square probabilities (tooltip on hover).
+- Per‑user total odds (sum of their squares’ probabilities).
 
 ## Backend (optional)
 The app can run fully client‑side. For shared state:

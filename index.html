@@ -36,10 +36,6 @@
     <main class="app-main" id="app-main">
       <section class="board-panel">
         <div class="board-toolbar">
-          <div class="view-toggle" role="group" aria-label="Score view">
-            <button type="button" id="view-halftime" class="toggle active">Halftime</button>
-            <button type="button" id="view-final" class="toggle">Final</button>
-          </div>
           <div class="toolbar-actions">
             <button type="button" id="toggle-sidebar">Focus mode</button>
             <button type="button" id="randomize-digits" class="primary">Randomize digits</button>
@@ -52,6 +48,10 @@
           <div class="axis-label cols-label" id="cols-label">Patriots columns</div>
           <div id="board-grid" class="board-grid" aria-label="Squares grid"></div>
           <div id="print-grid" class="print-grid" aria-hidden="true"></div>
+        </div>
+        <div class="view-toggle" role="group" aria-label="Score view">
+          <button type="button" id="view-halftime" class="toggle active">Halftime</button>
+          <button type="button" id="view-final" class="toggle">Final</button>
         </div>
         <div class="card board-score" id="board-score">
           <div class="board-score-header">
@@ -85,6 +85,7 @@
         <div class="card board-status" id="board-status">
           <h2>Current winners</h2>
           <div class="winning-info" id="winning-info-compact"></div>
+          <div class="odds-summary" id="odds-summary"></div>
         </div>
       </section>
 
@@ -107,6 +108,7 @@
         <section class="card">
           <h2>Participants</h2>
           <div id="participants-list" class="participants-list"></div>
+          <button type="button" id="open-summary" class="ghost">Participant summary</button>
           <div class="cost-summary">
             <div class="label">Price per square</div>
             <div class="value" id="price-display">$0</div>
@@ -153,7 +155,9 @@
             <div class="hint" id="fetch-status"></div>
             <div class="hint" id="score-refreshed"></div>
           </div>
+          <div class="game-info" id="game-info"></div>
           <div class="winning-info" id="winning-info"></div>
+          <div class="odds-summary" id="odds-summary-side"></div>
         </section>
 
         <section class="card">
@@ -220,6 +224,16 @@
     <footer class="app-footer">
       Built by xokocodo 2026 with Cursor and gpt-codex-5.2
     </footer>
+    <div class="modal" id="summary-modal" aria-hidden="true">
+      <div class="modal-backdrop" id="summary-backdrop"></div>
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>Participant summary</h2>
+          <button type="button" id="close-summary" class="ghost">Close</button>
+        </div>
+        <div class="summary-list" id="summary-list"></div>
+      </div>
+    </div>
     <script src="app.js"></script>
   </body>
 </html>
