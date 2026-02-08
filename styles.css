@@ -303,6 +303,7 @@ button:disabled {
 .axis-label.rows-label {
   position: absolute;
   left: 0;
+  padding-left: 6px;
   top: 50%;
   writing-mode: vertical-rl;
   text-orientation: mixed;

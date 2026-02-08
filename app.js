@@ -441,7 +441,7 @@ function handleSquareClick(event) {
     return;
   }
   if (current) {
-    if (!state.adminMode) return;
+    if (!state.adminMode && state.activeName && state.activeName !== current) return;
     if (!state.activeName || state.activeName === current) {
       const confirmClear = window.confirm(`Unassign this square from ${current}?`);
       if (!confirmClear) return;
@@ -507,7 +507,7 @@ function setActiveName() {
 
 function setView(view) {
   state.view = view;
-  saveState();
+  saveState({ skipSync: true });
   render();
 }
 
@@ -1417,7 +1417,7 @@ async function fetchScore() {
     }
     state.lastScoreRefresh = new Date().toISOString();
     elements.fetchStatus.textContent = `Updated ${new Date().toLocaleTimeString()}`;
-    saveState();
+    saveState({ skipSync: true });
     render();
   } catch (error) {
     elements.fetchStatus.textContent = "Fetch failed. Use manual scores.";
@@ -1514,22 +1514,22 @@ function setupListeners() {
   elements.pick10.addEventListener("click", () => pickRandomSquares(10));
   elements.scoreSeahawks.addEventListener("input", (event) => {
     state.scores.seahawks = Number(event.target.value || 0);
-    saveState();
+    saveState({ skipSync: true });
     render();
   });
   elements.scorePatriots.addEventListener("input", (event) => {
     state.scores.patriots = Number(event.target.value || 0);
-    saveState();
+    saveState({ skipSync: true });
     render();
   });
   elements.timeRemainingHalf.addEventListener("input", (event) => {
     state.timeRemainingHalf = Number(event.target.value || 0);
-    saveState();
+    saveState({ skipSync: true });
     render();
   });
   elements.timeRemainingGame.addEventListener("input", (event) => {
     state.timeRemainingGame = Number(event.target.value || 0);
-    saveState();
+    saveState({ skipSync: true });
     render();
   });
   elements.fetchScore.addEventListener("click", fetchScore);
