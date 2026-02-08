@@ -1,6 +1,6 @@
 const GRID_SIZE = 10;
 const STORAGE_KEY = "superbowl-squares-2026";
-const SCORE_REFRESH_MS = 30000;
+const SCORE_REFRESH_MS = 15000;
 const BOARD_REFRESH_MS = 30000;
 const ADMIN_KEY_STORAGE = "superbowl-squares-admin-key";
 const DIGIT_PRIOR = {
@@ -34,6 +34,8 @@ const elements = {
   gameClock: document.getElementById("game-clock"),
   scoreboardStatus: document.getElementById("scoreboard-status"),
   scoreboardDown: document.getElementById("scoreboard-down"),
+  scoreboardStatusMobile: document.getElementById("scoreboard-status-mobile"),
+  scoreboardDownMobile: document.getElementById("scoreboard-down-mobile"),
   teamALogo: document.getElementById("team-a-logo"),
   teamAShort: document.getElementById("team-a-short"),
   teamAName: document.getElementById("team-a-name"),
@@ -127,6 +129,8 @@ const defaultState = () => ({
   gameTitle: "Super Bowl LX",
   teamAName: "Seahawks",
   teamBName: "Patriots",
+  teamAAbbr: "SEA",
+  teamBAbbr: "NE",
   teamALogo: "https://a.espncdn.com/i/teamlogos/nfl/500/sea.png",
   teamBLogo: "https://a.espncdn.com/i/teamlogos/nfl/500/ne.png",
   collapsed: false,
@@ -184,6 +188,8 @@ function normalizeState(data) {
   base.gameTitle = (data.gameTitle || base.gameTitle).trim();
   base.teamAName = (data.teamAName || base.teamAName).trim();
   base.teamBName = (data.teamBName || base.teamBName).trim();
+  base.teamAAbbr = (data.teamAAbbr || base.teamAAbbr).trim();
+  base.teamBAbbr = (data.teamBAbbr || base.teamBAbbr).trim();
   base.teamALogo = (data.teamALogo || base.teamALogo).trim();
   base.teamBLogo = (data.teamBLogo || base.teamBLogo).trim();
   base.collapsed = Boolean(data.collapsed);
@@ -230,12 +236,13 @@ function normalizeTeamShort(name) {
   return letters.slice(0, 3);
 }
 
-function matchesPossession(possession, teamName, teamShort) {
+function matchesPossession(possession, teamName, teamShort, teamAbbr) {
   if (!possession) return false;
   const normalized = String(possession).toLowerCase();
   return (
     normalized.includes(String(teamName).toLowerCase()) ||
-    normalized.includes(String(teamShort).toLowerCase())
+    normalized.includes(String(teamShort).toLowerCase()) ||
+    normalized.includes(String(teamAbbr || "").toLowerCase())
   );
 }
 
@@ -316,6 +323,8 @@ function serializeStateForServer() {
     gameTitle,
     teamAName,
     teamBName,
+    teamAAbbr,
+    teamBAbbr,
     teamALogo,
     teamBLogo,
     pricePerSquare,
@@ -1132,6 +1141,8 @@ function render() {
   const teamBName = getTeamLabel(state.teamBName);
   const teamAShort = normalizeTeamShort(teamAName);
   const teamBShort = normalizeTeamShort(teamBName);
+  const teamAAbbr = state.teamAAbbr || teamAShort;
+  const teamBAbbr = state.teamBAbbr || teamBShort;
   const admin = isAdmin();
   placeViewToggle();
   const locked = state.locked.halftime || state.locked.final;
@@ -1141,11 +1152,14 @@ function render() {
   document.title = `${elements.gameTitle.textContent} Squares`;
   elements.gameSubtitle.textContent = `${teamAName} vs ${teamBName}`;
   elements.gameClock.textContent = state.gameClock || "Clock —";
-  elements.scoreboardStatus.textContent =
-    state.gameInfo?.statusDetail || state.gameClock || "Clock —";
-  elements.scoreboardDown.textContent = state.gameInfo?.downDistance
+  const statusText = state.gameInfo?.statusDetail || state.gameClock || "Clock —";
+  const downText = state.gameInfo?.downDistance
     ? `Down & distance: ${state.gameInfo.downDistance}`
     : "Down & distance —";
+  elements.scoreboardStatus.textContent = statusText;
+  elements.scoreboardDown.textContent = downText;
+  elements.scoreboardStatusMobile.textContent = statusText;
+  elements.scoreboardDownMobile.textContent = downText;
   elements.teamAName.textContent = teamAName;
   elements.teamBName.textContent = teamBName;
   elements.teamAShort.textContent = teamAShort;
@@ -1158,11 +1172,11 @@ function render() {
   if (teamABadge && teamBBadge) {
     teamABadge.classList.toggle(
       "possession",
-      matchesPossession(possession, teamAName, teamAShort)
+      matchesPossession(possession, teamAName, teamAShort, teamAAbbr)
     );
     teamBBadge.classList.toggle(
       "possession",
-      matchesPossession(possession, teamBName, teamBShort)
+      matchesPossession(possession, teamBName, teamBShort, teamBAbbr)
     );
   }
   setLogo(elements.teamALogo, state.teamALogo, `${teamAName} logo`);
@@ -1388,6 +1402,8 @@ async function fetchScore() {
       seahawks: Number(teamA.score || 0),
       patriots: Number(teamB.score || 0),
     };
+    state.teamAAbbr = teamA.team?.abbreviation || state.teamAAbbr;
+    state.teamBAbbr = teamB.team?.abbreviation || state.teamBAbbr;
     const clock = status.displayClock;
     const period = status.period;
     const shortDetail = status.type?.shortDetail || "";
@@ -1407,7 +1423,7 @@ async function fetchScore() {
       statusDetail: status.type?.shortDetail || "",
       period: status.period || "",
       clock: status.displayClock || "",
-      possession: possessionTeam,
+      possession: possessionTeam || situation.possessionText || "",
       downDistance: situation.shortDownDistanceText || situation.downDistanceText || "",
       yardLine: situation.possessionText || "",
       lastPlay: situation.lastPlay?.text || "",

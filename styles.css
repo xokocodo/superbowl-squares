@@ -82,6 +82,15 @@ textarea {
   font-size: 13px;
 }
 
+.scoreboard-meta-mobile {
+  display: none;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .scoreboard-status,
 .scoreboard-down {
   background: rgba(255, 255, 255, 0.04);
@@ -794,6 +803,10 @@ button:disabled {
 
   .scoreboard-meta {
     display: none;
+  }
+
+  .scoreboard-meta-mobile {
+    display: flex;
   }
 
   .team-badge {
