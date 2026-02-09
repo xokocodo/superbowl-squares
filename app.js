@@ -360,11 +360,21 @@ function applyServerState(serverState) {
   const localCollapsed = state.collapsed;
   const localActive = state.activeName;
   const localAdminMode = state.adminMode;
+  const localScores = { ...state.scores };
+  const localGameClock = state.gameClock;
+  const localGameInfo = state.gameInfo;
+  const localTimeRemainingHalf = state.timeRemainingHalf;
+  const localTimeRemainingGame = state.timeRemainingGame;
   const localLastRefresh = state.lastScoreRefresh;
   state = normalizeState(serverState);
   state.collapsed = localCollapsed;
   state.activeName = localActive;
   state.adminMode = localAdminMode;
+  state.scores = localScores;
+  state.gameClock = localGameClock;
+  state.gameInfo = localGameInfo;
+  state.timeRemainingHalf = localTimeRemainingHalf;
+  state.timeRemainingGame = localTimeRemainingGame;
   state.lastScoreRefresh = localLastRefresh;
   saveState({ skipSync: true });
 }
