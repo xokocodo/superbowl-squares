@@ -46,6 +46,13 @@ textarea {
   flex-wrap: wrap;
 }
 
+.scoreboard-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
 .title-block h1 {
   margin: 0 0 8px;
   font-size: clamp(24px, 3vw, 36px);
@@ -80,6 +87,7 @@ textarea {
   margin-top: 12px;
   color: var(--muted);
   font-size: 13px;
+  justify-content: flex-end;
 }
 
 .scoreboard-meta-mobile {
@@ -89,6 +97,13 @@ textarea {
   margin-top: 10px;
   color: var(--muted);
   font-size: 12px;
+  justify-content: flex-end;
+}
+
+.scoreboard-updated {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
 }
 
 .scoreboard-status,
@@ -776,6 +791,11 @@ button:disabled {
     padding: 20px 16px 28px;
   }
 
+  .scoreboard-block {
+    align-items: flex-start;
+    width: 100%;
+  }
+
   .board-panel {
     padding: 18px;
   }
@@ -807,6 +827,10 @@ button:disabled {
 
   .scoreboard-meta-mobile {
     display: flex;
+  }
+
+  .scoreboard-updated {
+    text-align: left;
   }
 
   .team-badge {

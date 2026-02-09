@@ -69,6 +69,7 @@ const elements = {
   testApi: document.getElementById("test-api"),
   fetchStatus: document.getElementById("fetch-status"),
   scoreRefreshed: document.getElementById("score-refreshed"),
+  scoreboardUpdated: document.getElementById("scoreboard-updated"),
   gameInfo: document.getElementById("game-info"),
   winningInfo: document.getElementById("winning-info"),
   winningInfoCompact: document.getElementById("winning-info-compact"),
@@ -1222,6 +1223,11 @@ function render() {
   elements.scoreRefreshed.textContent = state.lastScoreRefresh
     ? `Score last refreshed at ${new Date(state.lastScoreRefresh).toLocaleTimeString()}`
     : "Score last refreshed at —";
+  if (elements.scoreboardUpdated) {
+    elements.scoreboardUpdated.textContent = state.lastScoreRefresh
+      ? `Updated at ${new Date(state.lastScoreRefresh).toLocaleTimeString()}`
+      : "Updated at —";
+  }
   renderGameInfo();
   elements.adminToggle.checked = state.adminMode;
 
@@ -1398,9 +1404,15 @@ async function fetchScore() {
         .includes(teamBName)
     );
     if (!teamA || !teamB) throw new Error("Teams missing");
+    if (!status.type?.state) throw new Error("Status missing");
+    const scoreA = Number(teamA.score);
+    const scoreB = Number(teamB.score);
+    if (Number.isNaN(scoreA) || Number.isNaN(scoreB)) {
+      throw new Error("Scores missing");
+    }
     state.scores = {
-      seahawks: Number(teamA.score || 0),
-      patriots: Number(teamB.score || 0),
+      seahawks: scoreA,
+      patriots: scoreB,
     };
     state.teamAAbbr = teamA.team?.abbreviation || state.teamAAbbr;
     state.teamBAbbr = teamB.team?.abbreviation || state.teamBAbbr;
@@ -1436,7 +1448,7 @@ async function fetchScore() {
     saveState({ skipSync: true });
     render();
   } catch (error) {
-    elements.fetchStatus.textContent = "Fetch failed. Use manual scores.";
+    elements.fetchStatus.textContent = "API response incomplete. Scores unchanged.";
   }
 }
 
